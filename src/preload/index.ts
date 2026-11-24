@@ -17,7 +17,7 @@ const api = {
   pathForFile: (f: File): string => webUtils.getPathForFile(f),
   setTitle: (t: string) => ipcRenderer.send('app:setTitle', t),
   forceClose: () => ipcRenderer.send('app:forceClose'),
-  on: (ch: 'menu' | 'open-path' | 'file-changed' | 'request-close', cb: (arg?: any) => void) =>
+  on: (ch: 'menu' | 'open-path' | 'file-changed' | 'request-close' | 'update-status', cb: (arg?: any) => void) =>
     ipcRenderer.on(ch, (_e, arg) => cb(arg))
 }
 

@@ -449,6 +449,10 @@ api.on('request-close', async () => {
   api.forceClose()
 })
 
+api.on('update-status', (t: string) => {
+  $('status-update').textContent = t ?? ''
+})
+
 // ---------- 启动 ----------
 active = newTab({ content: WELCOME })
 showTab(active).then(() => {

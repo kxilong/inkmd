@@ -4,6 +4,8 @@ import { pathToFileURL } from 'node:url'
 import { marked } from 'marked'
 import { promises as fs } from 'node:fs'
 import chokidar, { FSWatcher } from 'chokidar'
+import electronUpdater from 'electron-updater'
+const { autoUpdater } = electronUpdater
 
 let win: BrowserWindow | null = null
 let watcher: FSWatcher | null = null
@@ -267,8 +269,105 @@ ipcMain.on('app:forceClose', () => {
   }
 })
 
-// ---------- 检查更新（只提示，不自动下载） ----------
-const RELEASES_API = 'https://api.github.com/repos/kxilong/inkmd/releases/latest'
+// ---------- 软件内更新：用户点「立即更新」才下载，下完由用户点「重启安装」 ----------
+autoUpdater.autoDownload = false
+autoUpdater.autoInstallOnAppQuit = false
+
+let updateState: 'idle' | 'checking' | 'downloading' | 'ready' = 'idle'
+let installOnClose = false
+let readyVersion = ''
+
+function updateStatus(text: string) {
+  win?.webContents.send('update-status', text)
+}
+
+function notesText(n: unknown): string {
+  if (!n) return ''
+  const raw = Array.isArray(n) ? n.map((x: any) => x.note ?? '').join('\n') : String(n)
+  return raw.replace(/<[^>]+>/g, '').trim().slice(0, 500)
+}
+
+autoUpdater.on('download-progress', (p) => {
+  win?.setProgressBar(p.percent / 100)
+  updateStatus(`正在下载更新 ${Math.floor(p.percent)}%`)
+})
+
+async function askInstall(version: string) {
+  updateState = 'ready'
+  readyVersion = version
+  win?.setProgressBar(-1)
+  updateStatus(`新版本 v${version} 已下载`)
+  const r = await dialog.showMessageBox(win!, {
+    type: 'info',
+    buttons: ['重启安装', '稍后'],
+    defaultId: 0,
+    cancelId: 1,
+    title: '更新已就绪',
+    message: `v${version} 已下载完成`,
+    detail: '点「重启安装」会关闭 inkmd 并安装新版本，未保存的文档会先询问你。选「稍后」可以在帮助菜单里再次安装。'
+  })
+  if (r.response === 0) {
+    installOnClose = true
+    win?.close() // 走正常关闭流程（未保存会提示），窗口真正关闭后再安装
+  }
+}
+
+async function checkForUpdates(manual: boolean) {
+  if (!app.isPackaged) {
+    if (manual) dialog.showMessageBox(win!, { type: 'info', message: '开发模式下不检查更新' })
+    return
+  }
+  if (updateState === 'downloading') {
+    if (manual) dialog.showMessageBox(win!, { type: 'info', message: '正在下载更新，请稍候' })
+    return
+  }
+  if (updateState === 'ready') {
+    return askInstall(readyVersion)
+  }
+  if (updateState === 'checking') return
+  updateState = 'checking'
+  try {
+    const res = await autoUpdater.checkForUpdates()
+    const info = res?.updateInfo
+    if (info && isNewer(info.version, app.getVersion())) {
+      updateState = 'idle'
+      const r = await dialog.showMessageBox(win!, {
+        type: 'info',
+        buttons: ['立即更新', '以后再说'],
+        defaultId: 0,
+        cancelId: 1,
+        title: '发现新版本',
+        message: `发现新版本 v${info.version}（当前 v${app.getVersion()}）`,
+        detail: notesText(info.releaseNotes) || '点「立即更新」在软件内下载，下完后提示你重启安装。'
+      })
+      if (r.response !== 0) return
+      updateState = 'downloading'
+      updateStatus('正在下载更新…')
+      await autoUpdater.downloadUpdate()
+      await askInstall(info.version)
+    } else {
+      updateState = 'idle'
+      if (manual) dialog.showMessageBox(win!, { type: 'info', message: `已是最新版本 v${app.getVersion()}` })
+    }
+  } catch (err) {
+    const wasDownloading = updateState === 'downloading'
+    updateState = 'idle'
+    win?.setProgressBar(-1)
+    updateStatus('')
+    if (!manual && !wasDownloading) return
+    const r = await dialog.showMessageBox(win!, {
+      type: 'error',
+      buttons: ['去下载页', '关闭'],
+      defaultId: 0,
+      cancelId: 1,
+      message: wasDownloading ? '下载更新失败' : '检查更新失败',
+      detail: String(err)
+    })
+    if (r.response === 0) shell.openExternal(RELEASES_PAGE)
+  }
+}
+
+const RELEASES_PAGE = 'https://github.com/kxilong/inkmd/releases/latest'
 
 function isNewer(latest: string, current: string) {
   const a = latest.replace(/^v/, '').split('.').map(Number)
@@ -277,30 +376,6 @@ function isNewer(latest: string, current: string) {
     if ((a[i] ?? 0) !== (b[i] ?? 0)) return (a[i] ?? 0) > (b[i] ?? 0)
   }
   return false
-}
-
-async function checkForUpdates(manual: boolean) {
-  try {
-    const res = await fetch(RELEASES_API, { headers: { Accept: 'application/vnd.github+json' } })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const rel = (await res.json()) as { tag_name: string; html_url: string; body?: string }
-    if (isNewer(rel.tag_name, app.getVersion())) {
-      const r = await dialog.showMessageBox(win!, {
-        type: 'info',
-        buttons: ['去下载', '以后再说'],
-        defaultId: 0,
-        cancelId: 1,
-        title: '发现新版本',
-        message: `发现新版本 ${rel.tag_name}（当前 v${app.getVersion()}）`,
-        detail: rel.body?.slice(0, 500) || '前往下载页面获取最新安装包。'
-      })
-      if (r.response === 0) shell.openExternal(rel.html_url)
-    } else if (manual) {
-      dialog.showMessageBox(win!, { type: 'info', message: `已是最新版本 v${app.getVersion()}` })
-    }
-  } catch (err) {
-    if (manual) dialog.showMessageBox(win!, { type: 'error', message: '检查更新失败', detail: String(err) })
-  }
 }
 
 app.whenReady().then(() => {
@@ -313,4 +388,7 @@ app.whenReady().then(() => {
   // 启动 3 秒后静默检查一次，有新版才弹窗
   if (app.isPackaged) setTimeout(() => checkForUpdates(false), 3000)
 })
-app.on('window-all-closed', () => app.quit())
+app.on('window-all-closed', () => {
+  if (installOnClose) autoUpdater.quitAndInstall(true, true) // 静默安装后自动重新打开
+  else app.quit()
+})
