@@ -1,0 +1,132 @@
+/* ---------- 文档样式：参考 Typora 默认（GitHub）主题 ---------- */
+#editor .milkdown {
+  --md-text: #333;
+  --md-heading: #222;
+  --md-rule: #eee;
+  --md-quote: #777;
+  --md-quote-bar: #dfe2e5;
+  --md-table-border: #dfe2e5;
+  --md-table-head: #f6f8fa;
+  --md-table-zebra: #f8f8f8;
+  --md-code-bg: #f3f4f4;
+  --md-code-text: #333;
+  --md-link: #4183c4;
+  --crepe-color-background: var(--bg);
+  --crepe-color-on-background: var(--md-text);
+  --crepe-color-inline-code: var(--md-code-text);
+  --crepe-color-inline-area: var(--md-code-bg);
+  --crepe-base-font-size: 16px;
+  --crepe-font-default: 'Open Sans', 'Clear Sans', 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --crepe-font-title: var(--crepe-font-default);
+  --crepe-font-code: Consolas, 'Cascadia Code', 'Liberation Mono', Menlo, Courier, monospace;
+  max-width: 920px;
+  color: var(--md-text);
+}
+body.dark #editor .milkdown {
+  --md-text: #d4d4d4;
+  --md-heading: #eee;
+  --md-rule: #3a3a3a;
+  --md-quote: #9a9a9a;
+  --md-quote-bar: #4a4a4a;
+  --md-table-border: #444;
+  --md-table-head: #2a2d2e;
+  --md-table-zebra: #262626;
+  --md-code-bg: #2d2d2d;
+  --md-code-text: #e6e6e6;
+  --md-link: #6aa9e9;
+}
+
+#editor .milkdown .ProseMirror {
+  padding: 12px 60px 160px;
+  font-family: var(--crepe-font-default);
+  font-size: 16px;
+  line-height: 1.6;
+}
+#editor .milkdown .ProseMirror p { line-height: 1.6; padding: 0; margin: 0.8em 0; }
+
+/* 标题：粗体、无衬线，h1/h2 带底线 */
+#editor .milkdown .ProseMirror h1,
+#editor .milkdown .ProseMirror h2,
+#editor .milkdown .ProseMirror h3,
+#editor .milkdown .ProseMirror h4,
+#editor .milkdown .ProseMirror h5,
+#editor .milkdown .ProseMirror h6 {
+  font-family: var(--crepe-font-title);
+  font-weight: 700;
+  color: var(--md-heading);
+  line-height: 1.4;
+  padding: 0;
+  margin: 1em 0 0.6em;
+}
+#editor .milkdown .ProseMirror h1 { font-size: 2.25em; line-height: 1.2; padding-bottom: 0.3em; border-bottom: 1px solid var(--md-rule); }
+#editor .milkdown .ProseMirror h2 { font-size: 1.75em; line-height: 1.225; padding-bottom: 0.3em; border-bottom: 1px solid var(--md-rule); }
+#editor .milkdown .ProseMirror h3 { font-size: 1.5em; line-height: 1.43; }
+#editor .milkdown .ProseMirror h4 { font-size: 1.25em; }
+#editor .milkdown .ProseMirror h5 { font-size: 1em; }
+#editor .milkdown .ProseMirror h6 { font-size: 1em; color: var(--md-quote); }
+#editor .milkdown .ProseMirror > h1:first-child,
+#editor .milkdown .ProseMirror > h2:first-child { margin-top: 0.4em; }
+
+/* 引用：左侧灰条、灰字 */
+#editor .milkdown .ProseMirror blockquote {
+  padding: 0 15px;
+  margin: 0.8em 0;
+  color: var(--md-quote);
+  border-left: 4px solid var(--md-quote-bar);
+  box-sizing: border-box;
+}
+#editor .milkdown .ProseMirror blockquote::before { display: none; }
+#editor .milkdown .ProseMirror blockquote p { margin: 0.5em 0; }
+
+/* 链接、行内代码 */
+#editor .milkdown .ProseMirror a { color: var(--md-link); text-decoration: none; }
+#editor .milkdown .ProseMirror a:hover { text-decoration: underline; }
+#editor .milkdown .ProseMirror code {
+  display: inline;
+  color: var(--md-code-text);
+  background: var(--md-code-bg);
+  border: 1px solid var(--md-rule);
+  border-radius: 3px;
+  padding: 0 4px;
+  font-size: 0.9em;
+  line-height: inherit;
+}
+
+/* 表格：全边框、表头浅底、隔行变色 */
+#editor .milkdown .milkdown-table-block { margin: 0.8em 0; }
+#editor .milkdown .milkdown-table-block table { border-collapse: collapse; }
+#editor .milkdown .milkdown-table-block th,
+#editor .milkdown .milkdown-table-block td {
+  border: 1px solid var(--md-table-border);
+  padding: 6px 13px;
+  line-height: 1.6;
+}
+#editor .milkdown .milkdown-table-block th { background: var(--md-table-head); font-weight: 700; }
+#editor .milkdown .milkdown-table-block td { background: var(--bg); }
+#editor .milkdown .milkdown-table-block tr:nth-child(2n + 1) td { background: var(--md-table-zebra); }
+#editor .milkdown .milkdown-table-block th p,
+#editor .milkdown .milkdown-table-block td p { margin: 0; }
+
+/* 列表、分隔线 */
+#editor .milkdown .ProseMirror ul,
+#editor .milkdown .ProseMirror ol { margin: 0.6em 0; }
+#editor .milkdown .ProseMirror li p { margin: 0.2em 0; }
+#editor .milkdown .ProseMirror hr {
+  height: 2px;
+  padding: 0;
+  margin: 1.5em 0;
+  background: var(--md-rule);
+  border: none;
+}
+
+/* 代码块：浅灰底、细边框 */
+#editor .milkdown .milkdown-code-block {
+  background: var(--md-code-bg);
+  border: 1px solid var(--md-rule);
+  border-radius: 4px;
+  margin: 0.8em 0;
+}
+#editor .milkdown .milkdown-code-block .cm-editor { font-family: var(--crepe-font-code); font-size: 0.9em; }
+#editor .milkdown .milkdown-code-block .cm-gutters { background: transparent; border-right: none; }
+#editor .milkdown .milkdown-code-block .cm-activeLineGutter,
+#editor .milkdown .milkdown-code-block .cm-activeLine { background: transparent; color: inherit; }

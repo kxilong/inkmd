@@ -5,6 +5,7 @@ import '@milkdown/crepe/theme/common/style.css'
 import lightTheme from '@milkdown/crepe/theme/frame.css?url'
 import darkTheme from '@milkdown/crepe/theme/frame-dark.css?url'
 import './style.css'
+import './typora.css'
 
 type TreeNode = { name: string; path: string; children?: TreeNode[] }
 type Tab = { id: number; path: string | null; saved: string; content: string; fresh: boolean; scroll: number }
