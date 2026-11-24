@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron'
 import { join, extname } from 'node:path'
 import { promises as fs } from 'node:fs'
 import chokidar, { FSWatcher } from 'chokidar'
@@ -99,6 +99,13 @@ function buildMenu() {
         { role: 'toggleDevTools' },
         { role: 'togglefullscreen', label: '全屏' }
       ]
+    },
+    {
+      label: '帮助',
+      submenu: [
+        { label: '检查更新…', click: () => checkForUpdates(true) },
+        { label: `关于 inkmd v${app.getVersion()}`, enabled: false }
+      ]
     }
   ])
   Menu.setApplicationMenu(menu)
@@ -184,5 +191,45 @@ ipcMain.on('app:forceClose', () => {
   }
 })
 
-app.whenReady().then(createWindow)
+// ---------- 检查更新（只提示，不自动下载） ----------
+const RELEASES_API = 'https://api.github.com/repos/kxilong/inkmd/releases/latest'
+
+function isNewer(latest: string, current: string) {
+  const a = latest.replace(/^v/, '').split('.').map(Number)
+  const b = current.split('.').map(Number)
+  for (let i = 0; i < 3; i++) {
+    if ((a[i] ?? 0) !== (b[i] ?? 0)) return (a[i] ?? 0) > (b[i] ?? 0)
+  }
+  return false
+}
+
+async function checkForUpdates(manual: boolean) {
+  try {
+    const res = await fetch(RELEASES_API, { headers: { Accept: 'application/vnd.github+json' } })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const rel = (await res.json()) as { tag_name: string; html_url: string; body?: string }
+    if (isNewer(rel.tag_name, app.getVersion())) {
+      const r = await dialog.showMessageBox(win!, {
+        type: 'info',
+        buttons: ['去下载', '以后再说'],
+        defaultId: 0,
+        cancelId: 1,
+        title: '发现新版本',
+        message: `发现新版本 ${rel.tag_name}（当前 v${app.getVersion()}）`,
+        detail: rel.body?.slice(0, 500) || '前往下载页面获取最新安装包。'
+      })
+      if (r.response === 0) shell.openExternal(rel.html_url)
+    } else if (manual) {
+      dialog.showMessageBox(win!, { type: 'info', message: `已是最新版本 v${app.getVersion()}` })
+    }
+  } catch (err) {
+    if (manual) dialog.showMessageBox(win!, { type: 'error', message: '检查更新失败', detail: String(err) })
+  }
+}
+
+app.whenReady().then(() => {
+  createWindow()
+  // 启动 3 秒后静默检查一次，有新版才弹窗
+  if (app.isPackaged) setTimeout(() => checkForUpdates(false), 3000)
+})
 app.on('window-all-closed', () => app.quit())
