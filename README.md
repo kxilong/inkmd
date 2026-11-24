@@ -38,3 +38,12 @@ src/main/      主进程：窗口、菜单、文件读写、目录树、文件�
 src/preload/   安全地把 API 暴露给页面
 src/renderer/  编辑器界面
 ```
+
+## 发布新版本
+
+```bash
+npm version patch          # 或 minor / major，会改 package.json 并打 tag
+git push --follow-tags
+```
+
+推送 `v*` 标签后，GitHub Actions 会在 Windows 上打包，并把安装包 exe 上传到 Releases。

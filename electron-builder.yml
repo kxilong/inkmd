@@ -18,3 +18,9 @@ fileAssociations:
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
+artifactName: ${productName}-Setup-${version}.${ext}
+publish:
+  provider: github
+  owner: kxilong
+  repo: inkmd
+  releaseType: release
