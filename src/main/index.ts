@@ -1,5 +1,7 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron'
-import { join, extname } from 'node:path'
+import { app, BrowserWindow, dialog, ipcMain, Menu, shell, protocol, net, nativeTheme } from 'electron'
+import { join, extname, dirname, basename, isAbsolute } from 'node:path'
+import { pathToFileURL } from 'node:url'
+import { marked } from 'marked'
 import { promises as fs } from 'node:fs'
 import chokidar, { FSWatcher } from 'chokidar'
 
@@ -8,6 +10,11 @@ let watcher: FSWatcher | null = null
 let lastSelfWrite = 0
 
 const MD_EXT = ['.md', '.markdown']
+
+// localfile://local/C:/path/to/img.png -> 读取本地文件（dev 和打包后都能显示相对路径图片）
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'localfile', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } }
+])
 
 function fileFromArgv(argv: string[]): string | null {
   const f = argv.slice(1).find((a) => MD_EXT.includes(extname(a).toLowerCase()))
@@ -67,13 +74,17 @@ function buildMenu() {
     {
       label: '文件',
       submenu: [
-        { label: '新建', accelerator: 'CmdOrCtrl+N', click: () => send('new') },
+        { label: '新建标签', accelerator: 'CmdOrCtrl+N', click: () => send('new') },
         { label: '打开文件…', accelerator: 'CmdOrCtrl+O', click: () => send('open-file') },
         { label: '打开文件夹…', accelerator: 'CmdOrCtrl+Shift+O', click: () => send('open-folder') },
         { type: 'separator' },
         { label: '保存', accelerator: 'CmdOrCtrl+S', click: () => send('save') },
         { label: '另存为…', accelerator: 'CmdOrCtrl+Shift+S', click: () => send('save-as') },
         { type: 'separator' },
+        { label: '导出 HTML…', click: () => send('export-html') },
+        { label: '导出 PDF…', accelerator: 'CmdOrCtrl+P', click: () => send('export-pdf') },
+        { type: 'separator' },
+        { label: '关闭标签', accelerator: 'CmdOrCtrl+W', click: () => send('close-tab') },
         { role: 'quit', label: '退出' }
       ]
     },
@@ -93,6 +104,10 @@ function buildMenu() {
       label: '视图',
       submenu: [
         { label: '切换侧边栏', accelerator: 'CmdOrCtrl+\\', click: () => send('toggle-sidebar') },
+        { label: '文件 / 大纲', accelerator: 'CmdOrCtrl+Shift+L', click: () => send('toggle-outline') },
+        { label: '暗色主题', accelerator: 'CmdOrCtrl+Shift+D', click: () => send('toggle-theme') },
+        { label: '下一个标签', accelerator: 'Ctrl+Tab', click: () => send('next-tab') },
+        { label: '上一个标签', accelerator: 'Ctrl+Shift+Tab', click: () => send('prev-tab') },
         { label: '源码模式', accelerator: 'CmdOrCtrl+/', click: () => send('toggle-source') },
         { type: 'separator' },
         { role: 'reload' },
@@ -172,16 +187,77 @@ async function readTree(dir: string, depth = 0): Promise<TreeNode[]> {
 
 ipcMain.handle('fs:tree', (_e, dir: string) => readTree(dir))
 
-ipcMain.handle('fs:watch', async (_e, p: string | null) => {
+// 监听所有打开的标签对应的文件
+ipcMain.handle('fs:watch', async (_e, paths: string[]) => {
   await watcher?.close()
   watcher = null
-  if (!p) return
-  watcher = chokidar.watch(p, { ignoreInitial: true })
-  watcher.on('change', () => {
+  if (!paths.length) return
+  watcher = chokidar.watch(paths, { ignoreInitial: true })
+  watcher.on('change', (p) => {
     if (Date.now() - lastSelfWrite < 1000) return // 忽略自己保存触发的变化
     win?.webContents.send('file-changed', p)
   })
 })
+
+// 粘贴图片：存到 md 同级 assets/ 下，返回相对路径
+ipcMain.handle('fs:saveImage', async (_e, docPath: string, data: ArrayBuffer, ext: string) => {
+  const dir = join(dirname(docPath), 'assets')
+  await fs.mkdir(dir, { recursive: true })
+  const name = `image-${new Date().toISOString().replace(/[-:T.Z]/g, '').slice(0, 14)}-${Math.random().toString(36).slice(2, 6)}.${ext}`
+  await fs.writeFile(join(dir, name), Buffer.from(data))
+  return `assets/${name}`
+})
+
+// ---------- 导出 ----------
+function toHtmlDoc(md: string, title: string, docPath: string | null) {
+  let body = marked.parse(md, { async: false }) as string
+  if (docPath) {
+    // 相对图片改成绝对 file:// 路径，导出后也能显示
+    body = body.replace(/(<img[^>]+src=")([^"]+)"/g, (m, pre, src) => {
+      if (/^(https?:|data:|file:)/.test(src)) return m
+      const abs = isAbsolute(src) ? src : join(dirname(docPath), decodeURI(src))
+      return `${pre}${pathToFileURL(abs).href}"`
+    })
+  }
+  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>${title}</title>
+<style>
+body{max-width:860px;margin:40px auto;padding:0 24px;font:16px/1.75 'Segoe UI','Microsoft YaHei',sans-serif;color:#222}
+h1,h2{border-bottom:1px solid #eee;padding-bottom:.3em}
+pre{background:#f6f8fa;padding:14px;border-radius:6px;overflow:auto}
+code{font-family:Consolas,'Cascadia Code',monospace;font-size:.9em}
+:not(pre)>code{background:#f0f0f0;padding:2px 5px;border-radius:4px}
+blockquote{margin:0;padding:0 1em;color:#666;border-left:4px solid #ddd}
+table{border-collapse:collapse}th,td{border:1px solid #ddd;padding:6px 12px}
+img{max-width:100%}
+@media print{body{margin:0}pre{white-space:pre-wrap}}
+</style></head><body>${body}</body></html>`
+}
+
+ipcMain.handle('export', async (_e, kind: 'html' | 'pdf', md: string, docPath: string | null) => {
+  const base = docPath ? basename(docPath).replace(/\.(md|markdown)$/i, '') : 'untitled'
+  const r = await dialog.showSaveDialog(win!, {
+    defaultPath: join(docPath ? dirname(docPath) : app.getPath('documents'), `${base}.${kind}`),
+    filters: [{ name: kind.toUpperCase(), extensions: [kind] }]
+  })
+  if (r.canceled || !r.filePath) return false
+  const html = toHtmlDoc(md, base, docPath)
+  if (kind === 'html') {
+    await fs.writeFile(r.filePath, html, 'utf-8')
+  } else {
+    const tmp = join(app.getPath('temp'), `inkmd-export-${Date.now()}.html`)
+    await fs.writeFile(tmp, html, 'utf-8')
+    const pdfWin = new BrowserWindow({ show: false })
+    await pdfWin.loadFile(tmp)
+    const pdf = await pdfWin.webContents.printToPDF({ printBackground: true, pageSize: 'A4' })
+    pdfWin.destroy()
+    await fs.writeFile(r.filePath, pdf)
+    fs.unlink(tmp).catch(() => {})
+  }
+  shell.showItemInFolder(r.filePath)
+  return true
+})
+
+ipcMain.handle('theme:system', () => (nativeTheme.shouldUseDarkColors ? 'dark' : 'light'))
 
 ipcMain.on('app:setTitle', (_e, t: string) => win?.setTitle(t))
 ipcMain.on('app:forceClose', () => {
@@ -228,6 +304,11 @@ async function checkForUpdates(manual: boolean) {
 }
 
 app.whenReady().then(() => {
+  protocol.handle('localfile', (req) => {
+    const url = new URL(req.url)
+    const p = decodeURIComponent(url.pathname.replace(/^\//, ''))
+    return net.fetch(pathToFileURL(p).href)
+  })
   createWindow()
   // 启动 3 秒后静默检查一次，有新版才弹窗
   if (app.isPackaged) setTimeout(() => checkForUpdates(false), 3000)

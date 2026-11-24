@@ -1,7 +1,7 @@
 {
   "name": "inkmd",
   "productName": "inkmd",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Typora-like Markdown editor for Windows",
   "main": "out/main/index.js",
   "scripts": {
@@ -12,7 +12,9 @@
   },
   "dependencies": {
     "@milkdown/crepe": "^7.5.0",
-    "chokidar": "^3.6.0"
+    "@milkdown/kit": "^7.23.0",
+    "chokidar": "^3.6.0",
+    "marked": "^15.0.12"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",

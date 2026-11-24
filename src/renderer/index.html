@@ -3,21 +3,30 @@
   <head>
     <meta charset="UTF-8" />
     <title>inkmd</title>
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src * data: file:; style-src 'self' 'unsafe-inline'; font-src 'self' data:" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src * data: blob: localfile:; style-src 'self' 'unsafe-inline'; font-src 'self' data:" />
+    <link id="theme-css" rel="stylesheet" />
   </head>
   <body>
     <div id="app">
       <aside id="sidebar">
-        <div id="sidebar-head">
-          <span id="folder-name">未打开文件夹</span>
+        <div id="side-tabs">
+          <button data-panel="files" class="on">文件</button>
+          <button data-panel="outline">大纲</button>
           <button id="btn-open-folder" title="打开文件夹">📂</button>
         </div>
-        <div id="tree"></div>
+        <div id="panel-files" class="panel">
+          <div id="folder-name">未打开文件夹</div>
+          <div id="tree"></div>
+        </div>
+        <div id="panel-outline" class="panel" hidden><div id="outline"></div></div>
       </aside>
-      <main id="main">
-        <div id="editor"></div>
-        <textarea id="source" spellcheck="false" hidden></textarea>
-      </main>
+      <section id="content">
+        <div id="tabbar"></div>
+        <main id="main">
+          <div id="editor"></div>
+          <textarea id="source" spellcheck="false" hidden></textarea>
+        </main>
+      </section>
     </div>
     <div id="statusbar"><span id="status-path">未命名</span><span id="status-info"></span></div>
     <script type="module" src="./src/main.ts"></script>

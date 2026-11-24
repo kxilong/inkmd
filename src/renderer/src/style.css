@@ -1,22 +1,44 @@
 * { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; }
+:root {
+  --bg: #fff; --side: #fafafa; --border: #e5e5e5; --text: #222; --muted: #888;
+  --hover: #eee; --active-bg: #dbe8ff; --active-fg: #1a56db; --tab: #f3f3f3;
+}
+body.dark {
+  --bg: #1e1e1e; --side: #252526; --border: #333; --text: #ddd; --muted: #888;
+  --hover: #2f2f2f; --active-bg: #2b3f63; --active-fg: #8ab4ff; --tab: #2a2a2a;
+}
+html, body { margin: 0; height: 100%; font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; background: var(--bg); color: var(--text); }
 body { display: flex; flex-direction: column; }
 #app { flex: 1; display: flex; min-height: 0; }
 
-#sidebar { width: 240px; border-right: 1px solid #e5e5e5; background: #fafafa; display: flex; flex-direction: column; }
+#sidebar { width: 240px; border-right: 1px solid var(--border); background: var(--side); display: flex; flex-direction: column; }
 body.no-sidebar #sidebar { display: none; }
-#sidebar-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-bottom: 1px solid #eee; font-size: 13px; font-weight: 600; }
-#sidebar-head button { border: none; background: none; cursor: pointer; font-size: 15px; }
-#tree { flex: 1; overflow: auto; font-size: 13px; padding: 4px 0; }
+#side-tabs { display: flex; border-bottom: 1px solid var(--border); }
+#side-tabs button { flex: 1; border: none; background: none; color: var(--muted); padding: 8px 0; cursor: pointer; font-size: 13px; border-bottom: 2px solid transparent; }
+#side-tabs button.on { color: var(--text); font-weight: 600; border-bottom-color: var(--active-fg); }
+#side-tabs #btn-open-folder { flex: 0 0 36px; }
+.panel { flex: 1; overflow: auto; font-size: 13px; }
+#folder-name { padding: 8px 12px 4px; font-weight: 600; color: var(--muted); font-size: 12px; }
 #tree ul { list-style: none; margin: 0; padding-left: 12px; }
 #tree > ul { padding-left: 4px; }
-.node { padding: 3px 8px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-radius: 4px; }
-.node:hover { background: #eee; }
-.node.active { background: #dbe8ff; color: #1a56db; }
-.node.dir { color: #555; }
+.node { padding: 3px 8px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-radius: 4px; margin: 0 4px; }
+.node:hover { background: var(--hover); }
+.node.active { background: var(--active-bg); color: var(--active-fg); }
+.node.dir { color: var(--muted); }
+#outline { padding: 6px 0; }
+#outline .empty { padding: 12px; color: var(--muted); }
 
-#main { flex: 1; overflow: auto; min-width: 0; }
+#content { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+#tabbar { display: flex; background: var(--tab); border-bottom: 1px solid var(--border); overflow-x: auto; flex-shrink: 0; }
+#tabbar:empty { display: none; }
+.tab { display: flex; align-items: center; gap: 8px; padding: 6px 10px 6px 14px; font-size: 12px; cursor: pointer; border-right: 1px solid var(--border); white-space: nowrap; color: var(--muted); max-width: 200px; }
+.tab span:first-child { overflow: hidden; text-overflow: ellipsis; }
+.tab.on { background: var(--bg); color: var(--text); }
+.tab .close { width: 16px; text-align: center; border-radius: 3px; }
+.tab .close:hover { background: var(--hover); }
+
+#main { flex: 1; overflow: auto; min-height: 0; }
 #editor .milkdown { max-width: 860px; margin: 0 auto; }
-#source { width: 100%; height: 100%; border: none; outline: none; resize: none; padding: 32px max(24px, calc((100% - 860px) / 2)); font: 14px/1.7 Consolas, 'Cascadia Code', monospace; }
+#source { display: block; width: 100%; height: 100%; border: none; outline: none; resize: none; background: var(--bg); color: var(--text); padding: 32px max(24px, calc((100% - 860px) / 2)); font: 14px/1.7 Consolas, 'Cascadia Code', monospace; }
 
-#statusbar { height: 24px; display: flex; justify-content: space-between; align-items: center; padding: 0 12px; font-size: 12px; color: #888; border-top: 1px solid #eee; background: #fafafa; }
+#statusbar { height: 24px; display: flex; justify-content: space-between; align-items: center; padding: 0 12px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); background: var(--side); }
