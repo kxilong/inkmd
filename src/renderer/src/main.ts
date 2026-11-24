@@ -1,5 +1,6 @@
 import { Crepe } from '@milkdown/crepe'
 import { insert } from '@milkdown/kit/utils'
+import { editorViewCtx } from '@milkdown/kit/core'
 import '@milkdown/crepe/theme/common/style.css'
 import lightTheme from '@milkdown/crepe/theme/frame.css?url'
 import darkTheme from '@milkdown/crepe/theme/frame-dark.css?url'
@@ -52,6 +53,33 @@ function resolveImage(url: string): string {
   return 'localfile://local/' + abs.replace(/\\/g, '/').split('/').map(encodeURIComponent).join('/')
 }
 
+// 去掉文件开头的不可见字符（BOM、零宽空格、&nbsp; 行、空行），它们会在顶部显示成一个空段落
+function normalizeMd(text: string) {
+  return text
+    .replace(/\r\n?/g, '\n')
+    .replace(/^[\uFEFF\u200B-\u200D]+/, '')
+    .replace(/^(?:[ \t\u00A0\u200B-\u200D\uFEFF]*(?:&nbsp;|<br\s*\/?>)?[ \t\u00A0\u200B-\u200D]*\n)+/i, '')
+}
+
+// 编辑器里开头若还有空段落（且后面还有内容），删掉
+function dropLeadingEmpty() {
+  crepe?.editor.action((ctx) => {
+    const view = ctx.get(editorViewCtx)
+    const { doc } = view.state
+    let end = 0
+    for (let i = 0; i < doc.childCount - 1; i++) {
+      const n = doc.child(i)
+      let blank = n.type.name === 'paragraph' && n.textContent.replace(/[\s\uFEFF\u200B-\u200D\u00A0]/g, '') === ''
+      n.forEach((c) => {
+        if (!c.isText && c.type.name !== 'hardbreak') blank = false
+      })
+      if (!blank) break
+      end += n.nodeSize
+    }
+    if (end > 0) view.dispatch(view.state.tr.delete(0, end).setMeta('addToHistory', false))
+  })
+}
+
 // ---------- 编辑器 ----------
 let outlineTimer = 0
 async function mountEditor(markdown: string) {
@@ -74,6 +102,7 @@ async function mountEditor(markdown: string) {
     })
   })
   await crepe.create()
+  dropLeadingEmpty()
   active.content = crepe.getMarkdown()
   renderOutline()
 }
@@ -169,7 +198,7 @@ async function confirmLeave(t: Tab): Promise<boolean> {
 async function openPath(p: string) {
   const existing = tabs.find((t) => t.path === p)
   if (existing) return showTab(existing)
-  const text = await api.readFile(p)
+  const text = normalizeMd(await api.readFile(p))
   // 当前是没改动过的空白/欢迎页，就直接替换掉
   const reuse = !active.path && !tabDirty(active) && (active.content.trim() === '' || active.content === active.saved)
   if (reuse) Object.assign(active, { path: p, saved: text, content: text, fresh: true, scroll: 0 })
@@ -426,7 +455,7 @@ api.on('open-path', (p: string) => openPath(p))
 api.on('file-changed', async (p: string) => {
   const t = tabs.find((x) => x.path === p)
   if (!t) return
-  const text = await api.readFile(p)
+  const text = normalizeMd(await api.readFile(p))
   if (text === t.saved) return
   if (t !== active) {
     if (!tabDirty(t)) Object.assign(t, { saved: text, content: text, fresh: true })

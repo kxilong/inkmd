@@ -42,3 +42,14 @@ body.no-sidebar #sidebar { display: none; }
 #source { display: block; width: 100%; height: 100%; border: none; outline: none; resize: none; background: var(--bg); color: var(--text); padding: 32px max(24px, calc((100% - 860px) / 2)); font: 14px/1.7 Consolas, 'Cascadia Code', monospace; }
 
 #statusbar { height: 24px; display: flex; justify-content: space-between; align-items: center; padding: 0 12px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); background: var(--side); }
+
+/* ---------- 滚动条：细、圆角、悬停才加深，跟随亮/暗主题 ---------- */
+:root { --sb-thumb: rgba(0, 0, 0, 0.18); --sb-thumb-hover: rgba(0, 0, 0, 0.35); }
+body.dark { --sb-thumb: rgba(255, 255, 255, 0.16); --sb-thumb-hover: rgba(255, 255, 255, 0.32); }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--sb-thumb); border-radius: 10px; border: 3px solid transparent; background-clip: content-box; min-height: 40px; }
+::-webkit-scrollbar-thumb:hover { background: var(--sb-thumb-hover); border-width: 2px; background-clip: content-box; }
+::-webkit-scrollbar-button { display: none; height: 0; width: 0; }
+#tabbar::-webkit-scrollbar { height: 4px; }
+#tabbar::-webkit-scrollbar-thumb { border: none; }

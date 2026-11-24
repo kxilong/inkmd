@@ -1,7 +1,7 @@
 {
   "name": "inkmd",
   "productName": "inkmd",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Typora-like Markdown editor for Windows",
   "main": "out/main/index.js",
   "scripts": {
