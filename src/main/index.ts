@@ -42,6 +42,8 @@ function createWindow() {
     width: 1200,
     height: 800,
     title: 'inkmd',
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#1f1f1f' : '#ffffff',
+    autoHideMenuBar: false,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
@@ -257,6 +259,12 @@ ipcMain.handle('export', async (_e, kind: 'html' | 'pdf', md: string, docPath: s
   }
   shell.showItemInFolder(r.filePath)
   return true
+})
+
+// 让 Windows 标题栏、菜单栏跟随软件主题（亮色时是白色标题栏，和 Typora 一致）
+ipcMain.on('theme:set', (_e, t: 'dark' | 'light') => {
+  nativeTheme.themeSource = t
+  win?.setBackgroundColor(t === 'dark' ? '#1f1f1f' : '#ffffff')
 })
 
 ipcMain.handle('theme:system', () => (nativeTheme.shouldUseDarkColors ? 'dark' : 'light'))

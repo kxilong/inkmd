@@ -36,10 +36,11 @@ async function applyTheme(theme: 'dark' | 'light') {
   document.body.classList.toggle('dark', theme === 'dark')
   $<HTMLLinkElement>('theme-css').href = theme === 'dark' ? darkTheme : lightTheme
   localStorage.setItem('theme', theme)
+  api.setTheme(theme)
 }
 const savedTheme = localStorage.getItem('theme') as 'dark' | 'light' | null
+// 默认亮色（Typora 风格），用户切换过就按用户的
 applyTheme(savedTheme ?? 'light')
-if (!savedTheme) api.systemTheme().then(applyTheme)
 
 // ---------- 图片路径：相对路径 -> localfile:// ----------
 function resolveImage(url: string): string {
@@ -164,6 +165,8 @@ function renderTabs() {
     el.onauxclick = (e) => e.button === 1 && closeTab(t)
     tabbarEl.appendChild(el)
   }
+  // 和 Typora 一样：只有一个文件时不显示标签栏
+  tabbarEl.classList.toggle('single', tabs.length <= 1)
 }
 
 function newTab(init: Partial<Tab> = {}): Tab {
@@ -281,12 +284,14 @@ async function toggleSource() {
   if (sourceMode) {
     active.content = sourceEl.value
     sourceMode = false
+    document.body.classList.remove('source-mode')
     sourceEl.hidden = true
     editorEl.hidden = false
     await mountEditor(active.content)
   } else {
     sourceEl.value = crepe?.getMarkdown() ?? active.content
     sourceMode = true
+    document.body.classList.add('source-mode')
     editorEl.hidden = true
     sourceEl.hidden = false
     sourceEl.focus()
@@ -342,8 +347,8 @@ function renderOutline() {
   const min = Math.min(...heads.map((h) => h.level))
   for (const h of heads) {
     const el = document.createElement('div')
-    el.className = 'node heading'
-    el.style.paddingLeft = `${8 + (h.level - min) * 14}px`
+    el.className = 'node heading h' + (h.level - min + 1)
+    el.style.paddingLeft = `${16 + (h.level - min) * 14}px`
     el.textContent = h.text
     el.onclick = h.go
     outlineEl.appendChild(el)
@@ -482,6 +487,10 @@ api.on('request-close', async () => {
 api.on('update-status', (t: string) => {
   $('status-update').textContent = t ?? ''
 })
+
+// 底栏按钮：‹ 切换侧边栏，</> 源码模式
+$('btn-sidebar').onclick = () => document.body.classList.toggle('no-sidebar')
+$('btn-source').onclick = () => toggleSource()
 
 // ---------- 启动 ----------
 active = newTab({ content: WELCOME })

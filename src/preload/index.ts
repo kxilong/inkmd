@@ -13,6 +13,7 @@ const api = {
     ipcRenderer.invoke('fs:saveImage', docPath, data, ext),
   exportDoc: (kind: 'html' | 'pdf', md: string, docPath: string | null): Promise<boolean> =>
     ipcRenderer.invoke('export', kind, md, docPath),
+  setTheme: (t: 'dark' | 'light') => ipcRenderer.send('theme:set', t),
   systemTheme: (): Promise<'dark' | 'light'> => ipcRenderer.invoke('theme:system'),
   pathForFile: (f: File): string => webUtils.getPathForFile(f),
   setTitle: (t: string) => ipcRenderer.send('app:setTitle', t),
