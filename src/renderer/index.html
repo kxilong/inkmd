@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>inkmd</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src * data: file:; style-src 'self' 'unsafe-inline'; font-src 'self' data:" />
+  </head>
+  <body>
+    <div id="app">
+      <aside id="sidebar">
+        <div id="sidebar-head">
+          <span id="folder-name">未打开文件夹</span>
+          <button id="btn-open-folder" title="打开文件夹">📂</button>
+        </div>
+        <div id="tree"></div>
+      </aside>
+      <main id="main">
+        <div id="editor"></div>
+        <textarea id="source" spellcheck="false" hidden></textarea>
+      </main>
+    </div>
+    <div id="statusbar"><span id="status-path">未命名</span><span id="status-info"></span></div>
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>
