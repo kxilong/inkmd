@@ -19,14 +19,18 @@
 
 | 操作 | 快捷键 |
 | --- | --- |
-| 新建标签 | Ctrl+N |
-| 打开文件 / 文件夹 | Ctrl+O / Ctrl+Shift+O |
+| 新建 / 打开 / 打开文件夹 | Ctrl+N / Ctrl+O / Ctrl+Shift+O |
 | 保存 / 另存为 | Ctrl+S / Ctrl+Shift+S |
-| 关闭标签 / 切换标签 | Ctrl+W / Ctrl+Tab |
+| 关闭 / 切换文件 | Ctrl+W / Ctrl+Tab |
 | 导出 PDF | Ctrl+P |
-| 侧边栏 / 文件与大纲切换 | Ctrl+\ / Ctrl+Shift+L |
-| 暗色主题 | Ctrl+Shift+D |
-| 源码模式 | Ctrl+/ |
+| 一~六级标题 / 段落 | Ctrl+1~6 / Ctrl+0 |
+| 提升 / 降低标题级别 | Ctrl+= / Ctrl+- |
+| 表格 / 代码块 / 公式块 | Ctrl+T / Ctrl+Shift+K / Ctrl+Shift+M |
+| 引用 / 有序 / 无序 / 任务列表 | Ctrl+Shift+Q / Ctrl+Shift+[ / Ctrl+Shift+] / Ctrl+Shift+X |
+| 加粗 / 斜体 / 代码 / 删除线 / 链接 | Ctrl+B / Ctrl+I / Ctrl+Shift+` / Alt+Shift+5 / Ctrl+K |
+| 侧边栏 / 大纲 / 文件树 | Ctrl+Shift+L / Ctrl+Shift+1 / Ctrl+Shift+3 |
+| 亮色 / 暗色主题 | Ctrl+Shift+D |
+| 源代码模式 | Ctrl+/ |
 
 ## 开发
 

@@ -1,5 +1,19 @@
 import { Crepe } from '@milkdown/crepe'
-import { insert } from '@milkdown/kit/utils'
+import { insert, callCommand } from '@milkdown/kit/utils'
+import {
+  wrapInHeadingCommand,
+  turnIntoTextCommand,
+  wrapInBlockquoteCommand,
+  wrapInBulletListCommand,
+  wrapInOrderedListCommand,
+  createCodeBlockCommand,
+  insertHrCommand,
+  toggleStrongCommand,
+  toggleEmphasisCommand,
+  toggleInlineCodeCommand,
+  toggleLinkCommand
+} from '@milkdown/kit/preset/commonmark'
+import { toggleStrikethroughCommand, insertTableCommand } from '@milkdown/kit/preset/gfm'
 import { editorViewCtx } from '@milkdown/kit/core'
 import '@milkdown/crepe/theme/common/style.css'
 import lightTheme from '@milkdown/crepe/theme/frame.css?url'
@@ -82,6 +96,103 @@ function dropLeadingEmpty() {
   })
 }
 
+// ---------- 编辑器内的中文文案（斜杠菜单 / 块菜单） ----------
+const ZH_BLOCK = {
+  textGroup: {
+    label: '文本',
+    text: { label: '正文' },
+    h1: { label: '一级标题' },
+    h2: { label: '二级标题' },
+    h3: { label: '三级标题' },
+    h4: { label: '四级标题' },
+    h5: { label: '五级标题' },
+    h6: { label: '六级标题' },
+    quote: { label: '引用' },
+    divider: { label: '分割线' }
+  },
+  listGroup: {
+    label: '列表',
+    bulletList: { label: '无序列表' },
+    orderedList: { label: '有序列表' },
+    taskList: { label: '任务列表' }
+  },
+  advancedGroup: {
+    label: '高级',
+    image: { label: '图片' },
+    codeBlock: { label: '代码块' },
+    table: { label: '表格' },
+    math: { label: '公式' }
+  }
+}
+
+// ---------- 段落 / 格式菜单 ----------
+function currentHeadingLevel(): number {
+  let level = 0
+  crepe?.editor.action((ctx) => {
+    const { $from } = ctx.get(editorViewCtx).state.selection
+    const n = $from.parent
+    level = n.type.name === 'heading' ? (n.attrs.level as number) : 0
+  })
+  return level
+}
+
+// 源码模式下：给选中文字两边加标记
+function wrapSource(before: string, after = before) {
+  const { selectionStart: a, selectionEnd: b, value } = sourceEl
+  sourceEl.setRangeText(before + value.slice(a, b) + after, a, b, 'select')
+  sourceEl.dispatchEvent(new Event('input'))
+}
+
+function format(cmd: string) {
+  if (sourceMode) {
+    const m: Record<string, [string, string?]> = { bold: ['**'], italic: ['*'], code: ['`'], strike: ['~~'], link: ['[', '](https://)'] }
+    if (m[cmd]) wrapSource(...(m[cmd] as [string, string?]))
+    return
+  }
+  if (!crepe) return
+  const run = (key: any, payload?: unknown) => crepe!.editor.action(callCommand(key, payload))
+  const h = /^h([1-6])$/.exec(cmd)
+  if (h) return run(wrapInHeadingCommand.key, Number(h[1]))
+  switch (cmd) {
+    case 'paragraph': return run(turnIntoTextCommand.key)
+    case 'heading-up': {
+      const l = currentHeadingLevel()
+      return l === 0 ? run(wrapInHeadingCommand.key, 6) : l > 1 ? run(wrapInHeadingCommand.key, l - 1) : undefined
+    }
+    case 'heading-down': {
+      const l = currentHeadingLevel()
+      return l === 6 ? run(turnIntoTextCommand.key) : l > 0 ? run(wrapInHeadingCommand.key, l + 1) : undefined
+    }
+    case 'table': return run(insertTableCommand.key, { row: 3, col: 3 })
+    case 'code-block': return run(createCodeBlockCommand.key)
+    case 'math': return run(createCodeBlockCommand.key, 'LaTeX')
+    case 'quote': return run(wrapInBlockquoteCommand.key)
+    case 'ordered-list': return run(wrapInOrderedListCommand.key)
+    case 'bullet-list': return run(wrapInBulletListCommand.key)
+    case 'task-list': {
+      run(wrapInBulletListCommand.key)
+      crepe.editor.action((ctx) => {
+        const view = ctx.get(editorViewCtx)
+        const { $from } = view.state.selection
+        for (let d = $from.depth; d > 0; d--) {
+          const n = $from.node(d)
+          if (n.type.name === 'list_item') {
+            view.dispatch(view.state.tr.setNodeMarkup($from.before(d), undefined, { ...n.attrs, checked: false }))
+            break
+          }
+        }
+      })
+      return
+    }
+    case 'hr': return run(insertHrCommand.key)
+    case 'bold': return run(toggleStrongCommand.key)
+    case 'italic': return run(toggleEmphasisCommand.key)
+    case 'code': return run(toggleInlineCodeCommand.key)
+    case 'strike': return run(toggleStrikethroughCommand.key)
+    case 'link': return run(toggleLinkCommand.key, { href: '' })
+  }
+}
+
 // ---------- 编辑器 ----------
 let outlineTimer = 0
 async function mountEditor(markdown: string) {
@@ -92,7 +203,34 @@ async function mountEditor(markdown: string) {
     defaultValue: markdown,
     featureConfigs: {
       [Crepe.Feature.Placeholder]: { text: '开始输入…', mode: 'doc' },
-      [Crepe.Feature.ImageBlock]: { proxyDomURL: resolveImage, onUpload: uploadImage }
+      [Crepe.Feature.ImageBlock]: {
+        proxyDomURL: resolveImage,
+        onUpload: uploadImage,
+        inlineUploadButton: '上传',
+        inlineUploadPlaceholderText: '或粘贴图片链接',
+        inlineConfirmButton: '确定',
+        blockUploadButton: '上传图片',
+        blockUploadPlaceholderText: '或粘贴图片链接',
+        blockConfirmButton: '确定',
+        blockCaptionPlaceholderText: '图片说明'
+      },
+      [Crepe.Feature.BlockEdit]: ZH_BLOCK as any,
+      [Crepe.Feature.Toolbar]: {
+        boldLabel: '加粗',
+        italicLabel: '斜体',
+        strikethroughLabel: '删除线',
+        codeLabel: '行内代码',
+        linkLabel: '链接',
+        latexLabel: '公式'
+      },
+      [Crepe.Feature.CodeMirror]: {
+        searchPlaceholder: '搜索语言',
+        noResultText: '没有结果',
+        copyText: '复制',
+        previewToggleText: (previewOnly: boolean) => (previewOnly ? '编辑' : '隐藏')
+      },
+      [Crepe.Feature.LinkTooltip]: { inputPlaceholder: '粘贴链接…' },
+      [Crepe.Feature.Latex]: { inlineEditConfirm: '确定' }
     }
   })
   crepe.on((l) => {
@@ -434,6 +572,7 @@ document.addEventListener(
 
 // ---------- 主进程事件 ----------
 api.on('menu', async (cmd: string) => {
+  if (cmd.startsWith('fmt:')) return format(cmd.slice(4))
   switch (cmd) {
     case 'new': return showTab(newTab())
     case 'open-file': {
@@ -451,6 +590,10 @@ api.on('menu', async (cmd: string) => {
     case 'prev-tab': return showTab(tabs[(tabs.indexOf(active) - 1 + tabs.length) % tabs.length])
     case 'toggle-sidebar': return document.body.classList.toggle('no-sidebar')
     case 'toggle-outline': return showPanel($('panel-outline').hidden ? 'outline' : 'files')
+    case 'show-outline': return showPanel('outline')
+    case 'show-files': return showPanel('files')
+    case 'theme-light': return applyTheme('light')
+    case 'theme-dark': return applyTheme('dark')
     case 'toggle-theme': return applyTheme(document.body.classList.contains('dark') ? 'light' : 'dark')
     case 'toggle-source': return toggleSource()
   }

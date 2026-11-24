@@ -73,27 +73,35 @@ function send(ch: string) {
   win?.webContents.send('menu', ch)
 }
 
+let currentTheme: 'light' | 'dark' = 'light'
+
 function buildMenu() {
+  const f = (cmd: string) => () => send('fmt:' + cmd)
   const menu = Menu.buildFromTemplate([
     {
-      label: '文件',
+      label: '文件(&F)',
       submenu: [
-        { label: '新建标签', accelerator: 'CmdOrCtrl+N', click: () => send('new') },
-        { label: '打开文件…', accelerator: 'CmdOrCtrl+O', click: () => send('open-file') },
+        { label: '新建', accelerator: 'CmdOrCtrl+N', click: () => send('new') },
+        { label: '打开…', accelerator: 'CmdOrCtrl+O', click: () => send('open-file') },
         { label: '打开文件夹…', accelerator: 'CmdOrCtrl+Shift+O', click: () => send('open-folder') },
         { type: 'separator' },
         { label: '保存', accelerator: 'CmdOrCtrl+S', click: () => send('save') },
         { label: '另存为…', accelerator: 'CmdOrCtrl+Shift+S', click: () => send('save-as') },
         { type: 'separator' },
-        { label: '导出 HTML…', click: () => send('export-html') },
-        { label: '导出 PDF…', accelerator: 'CmdOrCtrl+P', click: () => send('export-pdf') },
+        {
+          label: '导出',
+          submenu: [
+            { label: 'PDF', accelerator: 'CmdOrCtrl+P', click: () => send('export-pdf') },
+            { label: 'HTML', click: () => send('export-html') }
+          ]
+        },
         { type: 'separator' },
-        { label: '关闭标签', accelerator: 'CmdOrCtrl+W', click: () => send('close-tab') },
+        { label: '关闭', accelerator: 'CmdOrCtrl+W', click: () => send('close-tab') },
         { role: 'quit', label: '退出' }
       ]
     },
     {
-      label: '编辑',
+      label: '编辑(&E)',
       submenu: [
         { role: 'undo', label: '撤销' },
         { role: 'redo', label: '重做' },
@@ -101,26 +109,77 @@ function buildMenu() {
         { role: 'cut', label: '剪切' },
         { role: 'copy', label: '复制' },
         { role: 'paste', label: '粘贴' },
+        { role: 'pasteAndMatchStyle', label: '粘贴为纯文本' },
+        { type: 'separator' },
         { role: 'selectAll', label: '全选' }
       ]
     },
     {
-      label: '视图',
+      label: '段落(&P)',
       submenu: [
-        { label: '切换侧边栏', accelerator: 'CmdOrCtrl+\\', click: () => send('toggle-sidebar') },
-        { label: '文件 / 大纲', accelerator: 'CmdOrCtrl+Shift+L', click: () => send('toggle-outline') },
-        { label: '暗色主题', accelerator: 'CmdOrCtrl+Shift+D', click: () => send('toggle-theme') },
-        { label: '下一个标签', accelerator: 'Ctrl+Tab', click: () => send('next-tab') },
-        { label: '上一个标签', accelerator: 'Ctrl+Shift+Tab', click: () => send('prev-tab') },
-        { label: '源码模式', accelerator: 'CmdOrCtrl+/', click: () => send('toggle-source') },
+        { label: '一级标题', accelerator: 'CmdOrCtrl+1', click: f('h1') },
+        { label: '二级标题', accelerator: 'CmdOrCtrl+2', click: f('h2') },
+        { label: '三级标题', accelerator: 'CmdOrCtrl+3', click: f('h3') },
+        { label: '四级标题', accelerator: 'CmdOrCtrl+4', click: f('h4') },
+        { label: '五级标题', accelerator: 'CmdOrCtrl+5', click: f('h5') },
+        { label: '六级标题', accelerator: 'CmdOrCtrl+6', click: f('h6') },
         { type: 'separator' },
-        { role: 'reload' },
-        { role: 'toggleDevTools' },
-        { role: 'togglefullscreen', label: '全屏' }
+        { label: '段落', accelerator: 'CmdOrCtrl+0', click: f('paragraph') },
+        { type: 'separator' },
+        { label: '提升标题级别', accelerator: 'CmdOrCtrl+=', click: f('heading-up') },
+        { label: '降低标题级别', accelerator: 'CmdOrCtrl+-', click: f('heading-down') },
+        { type: 'separator' },
+        { label: '表格', accelerator: 'CmdOrCtrl+T', click: f('table') },
+        { label: '代码块', accelerator: 'CmdOrCtrl+Shift+K', click: f('code-block') },
+        { label: '公式块', accelerator: 'CmdOrCtrl+Shift+M', click: f('math') },
+        { type: 'separator' },
+        { label: '引用', accelerator: 'CmdOrCtrl+Shift+Q', click: f('quote') },
+        { type: 'separator' },
+        { label: '有序列表', accelerator: 'CmdOrCtrl+Shift+[', click: f('ordered-list') },
+        { label: '无序列表', accelerator: 'CmdOrCtrl+Shift+]', click: f('bullet-list') },
+        { label: '任务列表', accelerator: 'CmdOrCtrl+Shift+X', click: f('task-list') },
+        { type: 'separator' },
+        { label: '水平分割线', click: f('hr') }
       ]
     },
     {
-      label: '帮助',
+      label: '格式(&O)',
+      submenu: [
+        { label: '加粗', accelerator: 'CmdOrCtrl+B', click: f('bold') },
+        { label: '斜体', accelerator: 'CmdOrCtrl+I', click: f('italic') },
+        { label: '代码', accelerator: 'CmdOrCtrl+Shift+`', click: f('code') },
+        { label: '删除线', accelerator: 'Alt+Shift+5', click: f('strike') },
+        { type: 'separator' },
+        { label: '超链接', accelerator: 'CmdOrCtrl+K', click: f('link') }
+      ]
+    },
+    {
+      label: '视图(&V)',
+      submenu: [
+        { label: '源代码模式', accelerator: 'CmdOrCtrl+/', click: () => send('toggle-source') },
+        { type: 'separator' },
+        { label: '显示 / 隐藏侧边栏', accelerator: 'CmdOrCtrl+Shift+L', click: () => send('toggle-sidebar') },
+        { label: '大纲', accelerator: 'CmdOrCtrl+Shift+1', click: () => send('show-outline') },
+        { label: '文件树', accelerator: 'CmdOrCtrl+Shift+3', click: () => send('show-files') },
+        { type: 'separator' },
+        { label: '下一个文件', accelerator: 'Ctrl+Tab', click: () => send('next-tab') },
+        { label: '上一个文件', accelerator: 'Ctrl+Shift+Tab', click: () => send('prev-tab') },
+        { type: 'separator' },
+        { role: 'togglefullscreen', label: '全屏' },
+        { role: 'toggleDevTools', label: '开发者工具' }
+      ]
+    },
+    {
+      label: '主题(&T)',
+      submenu: [
+        { label: 'Github', type: 'radio', checked: currentTheme === 'light', click: () => send('theme-light') },
+        { label: 'Night', type: 'radio', checked: currentTheme === 'dark', click: () => send('theme-dark') },
+        { type: 'separator' },
+        { label: '切换亮色 / 暗色', accelerator: 'CmdOrCtrl+Shift+D', click: () => send('toggle-theme') }
+      ]
+    },
+    {
+      label: '帮助(&H)',
       submenu: [
         { label: '检查更新…', click: () => checkForUpdates(true) },
         { label: `关于 inkmd v${app.getVersion()}`, enabled: false }
@@ -264,6 +323,10 @@ ipcMain.handle('export', async (_e, kind: 'html' | 'pdf', md: string, docPath: s
 // 让 Windows 标题栏、菜单栏跟随软件主题（亮色时是白色标题栏，和 Typora 一致）
 ipcMain.on('theme:set', (_e, t: 'dark' | 'light') => {
   nativeTheme.themeSource = t
+  if (currentTheme !== t) {
+    currentTheme = t
+    buildMenu()
+  }
   win?.setBackgroundColor(t === 'dark' ? '#1f1f1f' : '#ffffff')
 })
 
